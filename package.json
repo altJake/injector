@@ -1,0 +1,35 @@
+{
+  "name": "injector",
+  "version": "1.0.0",
+  "description": "Inject your values into files using simple annotation syntax",
+  "main": "index.js",
+  "dependencies": {
+    "q": "^1.5.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kobyshi/injector.git"
+  },
+  "keywords": [
+    "inject",
+    "json"
+  ],
+  "authors": [
+    {
+      "name": "Jakob Shimony",
+      "email": "kobyshi@gmail.com"
+    },
+    {
+      "name": "Omri Shilian"
+    }
+  ],
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/kobyshi/injector/issues"
+  },
+  "homepage": "https://github.com/kobyshi/injector#readme"
+}
