@@ -3,7 +3,7 @@ function extendError(error, message){
     return error;
 }
 
-const stringRegex = /["].+["]$|^['].+[']$/;
+const stringRegex = /^["].+["]$|^['].+[']$/;
 
 function getString(wrappedString){
     if(stringRegex.test(wrappedString)){
