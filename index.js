@@ -129,6 +129,8 @@ function writeOutputFile(options) {
 }
 
 function injectMe(options) {
+    //keep original options object intact
+    options = Object.create(options);
     return validateOptions(options)
         .then(prepareOptions)
         .then(readInputFile)
@@ -139,4 +141,4 @@ function injectMe(options) {
         .then(writeOutputFile);
 }
 
-module.exports = (options) => injectMe(options);
+module.exports = injectMe;
