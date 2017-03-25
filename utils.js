@@ -7,7 +7,7 @@ const stringRegex = /^["].*["]$|^['].*[']$/;
 const doubleQuote = new RegExp('\\"', 'g');
 
 function getString(wrappedString){
-    if(wrappedString && wrappedString.length >= 2 && stringRegex.exec(wrappedString)){
+    if(wrappedString && wrappedString.length >= 2 && stringRegex.test(wrappedString)){
         var strToParse = wrappedString;
 
         if(strToParse[0] !== '"'){ //JSON.parse supports only double-quote
