@@ -62,24 +62,18 @@ function extractAnnotations(options) {
 }
 
 function processInjections(options) {
-    return Q.promise((resolve) => {
+    return Q.promise((resolve, reject) => {
         const processedChanges = [];
         options.changes.forEach(change => {
             var injectionPropertiesSplitted = change.injectionProperties.split(',');
-            if (injectionPropertiesSplitted.length !== 2)
-                return;
+            if (injectionPropertiesSplitted.length !== 2){
+                return reject(new Error('Unvalid format at line ' + change.index + '.' ))
+            }
 
-            var valueId = injectionPropertiesSplitted[0].trim();
-            if (valueId[0] === '\'' || valueId[0] === '"')
-                valueId = valueId.slice(1);
-            if (valueId[valueId.length - 1] === '\'' || valueId[valueId.length - 1] === '"')
-                valueId = valueId.slice(0, -1);
+            injectionPropertiesSplitted = injectionPropertiesSplitted.map(value=> value.trim());
 
-            var valueField = injectionPropertiesSplitted[1].trim();
-            if (valueField[0] === '\'' || valueField[0] === '"')
-                valueField = valueField.slice(1);
-            if (valueField[valueField.length - 1] === '\'' || valueField[valueField.length - 1] === '"')
-                valueField = valueField.slice(0, -1);
+            var valueId = utils.getString(injectionPropertiesSplitted[0]);
+            var valueField = utils.getString(injectionPropertiesSplitted[1]);
 
             change.injectionProperties = {
                 id: valueId,
