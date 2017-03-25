@@ -11,6 +11,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const injector = require('../index.js');
+const utils = require('../utils.js');
 
 describe('Injector', function() {
   describe('simple test', function() {
@@ -54,5 +55,14 @@ describe('Injector', function() {
 				})
 				.catch(err => done(err));
     });
+  });
+});
+
+describe('Utils', function() {
+  it('getString', function() {
+	  assert.equal(utils.getString('"some value"'), 'some value');
+	  assert.equal(utils.getString("'some-value'"), 'some-value');
+	  assert.equal(utils.getString("'d\"q'"), 'd"q');
+	  assert.equal(utils.getString('"s\'q"'), "s'q");
   });
 });
