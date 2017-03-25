@@ -1,34 +1,51 @@
 const util = require('util');
 const fs = require('fs');
 const Q = require('q');
+const utils = require('./utils.js');
 
 const EOL = require('os').EOL;
 const annotationRegexTemplate = '@%s\\((.*)\\)';
 
-function ensureOptions(options) {
+function validateOptions(options) {
     return Q.promise((resolve, reject) => {
         if (!options.annotationKey)
-            reject('no "annotationKey" option supplied');
+            return reject(new Error('Option "annotationKey" is required'));
         if (!options.inputFile)
-            reject('no "inputFile" option supplied');
+            return reject(new Error('Option "inputFile" is required'));
         if (!options.provider)
-            reject('no "provider" option supplied');
+            return reject(new Error('Option "provider" is required'));
         if (typeof options.provider.getValues !== 'function')
-            reject('the supplied provider does not contain a "getValues" function');
-        if (!fs.existsSync(options.inputFile))
-            reject('the input file does not exist');
-
-        options.regex =
-            new RegExp(util.format(annotationRegexTemplate, options.annotationKey),
-                       options.regexFlags || 'ig');
+            return reject(new Error('Supplied provider does not contain a "getValues" function'));
 
         return resolve(options);
     });
 }
 
+function prepareOptions(options){
+    return Q.promise((resolve) => {
+        options.regex =
+        new RegExp(util.format(annotationRegexTemplate, options.annotationKey),
+                    options.regexFlags || 'ig');
+
+        options.lineDelimiter = options.lineDelimiter || EOL;
+        return resolve(options);
+    });
+}
+
+function readInputFile(options){
+    return Q.promise((resolve, reject) => {
+        fs.readFile(options.inputFile, (error, data)=>{
+            if(error)
+                return reject(utils.extendError(error, 'Error reading output file'));
+
+            options.fileContents = data.toString().split(options.lineDelimiter);
+            return resolve(options);
+        });
+    });
+}
+
 function extractAnnotations(options) {
     return Q.promise((resolve) => {
-        options.fileContents = fs.readFileSync(options.inputFile).toString().split(EOL);
         options.changes =
             options.fileContents
                 .map((line, index) => {
@@ -104,27 +121,28 @@ function replaceAnnotations(options) {
     });
 }
 
-function writeOutput(options) {
-    return Q.promise((resolve) => {
-        const fileContents = options.fileContents.join(EOL);
-        const output = options.outputFile || options.inputFile;
+function writeOutputFile(options) {
+    return Q.promise((resolve, reject) => {
+        const fileContents = options.fileContents.join(options.lineDelimiter);
+        const outputFile = options.outputFile || options.inputFile;
 
-        fs.writeFile(output, fileContents, err => {
-            if (err) reject(err);
-
-            return resolve(output);
+        fs.writeFile(outputFile, fileContents, (error)=>{
+            if(error)
+                return reject(utils.extendError(error, 'Error writing output file'));
+            return resolve(outputFile);
         });
     });
 }
 
 function injectMe(options) {
-    return Q(options)
-        .then(ensureOptions)
+    return validateOptions(options)
+        .then(prepareOptions)
+        .then(readInputFile)
         .then(extractAnnotations)
         .then(processInjections)
         .then(retrieveValuesFromProvider)
         .then(replaceAnnotations)
-        .then(writeOutput);
+        .then(writeOutputFile);
 }
 
 module.exports = (options) => injectMe(options);
