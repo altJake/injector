@@ -1,0 +1,10 @@
+{
+  "db": {
+    "host": "@injekt('db','host')",
+    "username": "@injekt('db','user name')",
+    "password": "@injekt('db','password')"
+  },
+  "logger": {
+    "token": "@injekt('logz', 'token')"
+  }
+}
