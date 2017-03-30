@@ -3,7 +3,7 @@ const fs = require('fs');
 const Q = require('q');
 const utils = require('./utils.js');
 
-const annotationRegexTemplate = '@%s\\((.*)\\)';
+const annotationRegexTemplate = '(@%s\\([^(^)]*\\))';
 
 function validateOptions(options) {
     return Q.promise((resolve, reject) => {
@@ -44,16 +44,36 @@ function readInputFile(options){
 
 function extractAnnotations(options) {
     return Q.promise((resolve) => {
-        var changes = [];
-        options.regex = new RegExp(options.regex);
-        var results = options.regex.exec(options.fileContents);
 
-        while (results != null) {
-          changes.push(results[1]);
-          results = options.regex.exec(options.fileContents)
+        var splitted = options.fileContents.split(options.regex);
+        options.changes = [];
+
+        if(splitted.length !== 1){
+            var mod = options.regex.test(splitted[0])? 1: 2;
+
+            var pos = 0;
+            for (var i = 0; i < splitted.length; i++) {
+
+                pos+= splitted[i].length;
+
+                if( (i+mod)%2 === 0) continue;
+
+                var token = splitted[i].substring(options.annotationKey.length+2).slice(0, -1);
+
+                options.changes.push({
+                    token: token,
+                    index: pos,
+                    _index: i,
+                    replace: function(value){
+                        splitted[this._index] = value;
+                    }
+                });
+            }
         }
 
-        options.changes = changes;
+        options.buildString = function(){
+            return splitted.join('');
+        };
 
         return resolve(options);
     });
@@ -61,9 +81,10 @@ function extractAnnotations(options) {
 
 function processInjections(options) {
     return Q.promise((resolve, reject) => {
-        const processedChanges = [];
+
+        const processedChanges = []; 
         options.changes.forEach(change => {
-          var injectionProperties = change.split(',');
+          var injectionProperties = change.token.split(',');
             if (injectionProperties.length !== 2){
                 return reject(new Error('Invalid format at line ' + change + '.' ))
             }
@@ -72,14 +93,9 @@ function processInjections(options) {
 
             var valueId = utils.getString(injectionProperties[0]);
             var valueField = utils.getString(injectionProperties[1]);
-
-            processedChanges.push({
-                id: valueId,
-                field: valueField
-            });
+            change.id = valueId;
+            change.field = valueField;
         });
-
-        options.changes = processedChanges;
 
         return resolve(options);
     });
@@ -93,7 +109,7 @@ function retrieveValuesFromProvider(options) {
             valuesIds.forEach(valueId => {
                 options.changes
                     .filter(change => change.id === valueId)
-                    .forEach(change => change.value = values[valueId][change.field]);
+                    .forEach(change => change.replace(values[valueId][change.field]));
             });
 
             return options;
@@ -102,15 +118,7 @@ function retrieveValuesFromProvider(options) {
 
 function replaceAnnotations(options) {
     return Q.promise((resolve) => {
-      options.regex = new RegExp(options.regex);
-      var results = options.regex.exec(options.fileContents);
-
-      while (results != null) {
-        // TODO insert right injection for each change
-        options.fileContents = options.fileContents.replace(results[0], options.changes[0].value);
-        results = options.regex.exec(options.fileContents);
-      }
-
+        options.fileContents = options.buildString();
         return resolve(options);
     });
 }
