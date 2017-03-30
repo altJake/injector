@@ -47,10 +47,10 @@ describe('Injector', function() {
 			injector(options)
 				.then(output => {
 					const processed = require('./test_files/processed.json');
-					assert(simpleProvider.getValues().db.host, processed.db.host);
-					assert(simpleProvider.getValues().db['user name'], processed.db.username);
-					assert(simpleProvider.getValues().db.password, processed.db.password);
-					assert(simpleProvider.getValues().logz.token, processed.logger.token);
+					assert.equal(simpleProvider.getValues().db.host, processed.db.host);
+					assert.equal(simpleProvider.getValues().db['user name'], processed.db.username);
+					assert.equal(simpleProvider.getValues().db.password, processed.db.password);
+					assert.equal(simpleProvider.getValues().logz.token, processed.logger.token);
 					done();
 				})
 				.catch(err => done(err));
