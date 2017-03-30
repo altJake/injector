@@ -49,25 +49,17 @@ function extractAnnotations(options) {
         options.changes = [];
 
         if(splitted.length !== 1){
-            var mod = options.regex.test(splitted[0])? 1: 2;
-
-            var pos = 0;
             for (var i = 0; i < splitted.length; i++) {
 
-                pos+= splitted[i].length;
-
-                if( (i+mod)%2 === 0) continue;
-
-                var token = splitted[i].substring(options.annotationKey.length+2).slice(0, -1);
-
-                options.changes.push({
-                    token: token,
-                    index: pos,
-                    _index: i,
-                    replace: function(value){
-                        splitted[this._index] = value;
-                    }
-                });
+                if(options.regex.test(splitted[i])){
+                    options.changes.push({
+                        token: extractToken(splitted[i], options.annotationKey),
+                        index: i,
+                        replace: function(value){
+                            splitted[this.index] = value;
+                        }
+                    });
+                }
             }
         }
 
@@ -79,10 +71,13 @@ function extractAnnotations(options) {
     });
 }
 
+function extractToken(str, annotationKey){
+    return str.substring(annotationKey.length+2).slice(0, -1);
+}
+
 function processInjections(options) {
     return Q.promise((resolve, reject) => {
 
-        const processedChanges = []; 
         options.changes.forEach(change => {
           var injectionProperties = change.token.split(',');
             if (injectionProperties.length !== 2){
