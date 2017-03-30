@@ -3,7 +3,6 @@ const fs = require('fs');
 const Q = require('q');
 const utils = require('./utils.js');
 
-const EOL = require('os').EOL;
 const annotationRegexTemplate = '@%s\\((.*)\\)';
 
 function validateOptions(options) {
@@ -25,9 +24,8 @@ function prepareOptions(options){
     return Q.promise((resolve) => {
         options.regex =
         new RegExp(util.format(annotationRegexTemplate, options.annotationKey),
-                    options.regexFlags || 'ig');
+                    options.regexFlags || 'g');
 
-        options.lineDelimiter = options.lineDelimiter || EOL;
         return resolve(options);
     });
 }
@@ -38,7 +36,7 @@ function readInputFile(options){
             if(error)
                 return reject(utils.extendError(error, 'Error reading output file'));
 
-            options.fileContents = data.toString().split(options.lineDelimiter);
+            options.fileContents = data.toString();
             return resolve(options);
         });
     });
@@ -46,16 +44,16 @@ function readInputFile(options){
 
 function extractAnnotations(options) {
     return Q.promise((resolve) => {
-        options.changes =
-            options.fileContents
-                .map((line, index) => {
-                    const re = new RegExp(options.regex);
-                    const results = re.exec(line);
+        var changes = [];
+        options.regex = new RegExp(options.regex);
+        var results = options.regex.exec(options.fileContents);
 
-                    if (results)
-                        return {index: index, injectionProperties: results[1]};
-                })
-                .filter(change => !!change);
+        while (results != null) {
+          changes.push(results[1]);
+          results = options.regex.exec(options.fileContents)
+        }
+
+        options.changes = changes;
 
         return resolve(options);
     });
@@ -65,22 +63,20 @@ function processInjections(options) {
     return Q.promise((resolve, reject) => {
         const processedChanges = [];
         options.changes.forEach(change => {
-            var injectionPropertiesSplitted = change.injectionProperties.split(',');
-            if (injectionPropertiesSplitted.length !== 2){
-                return reject(new Error('Unvalid format at line ' + change.index + '.' ))
+          var injectionProperties = change.split(',');
+            if (injectionProperties.length !== 2){
+                return reject(new Error('Invalid format at line ' + change + '.' ))
             }
 
-            injectionPropertiesSplitted = injectionPropertiesSplitted.map(value=> value.trim());
+            injectionProperties = injectionProperties.map(value=> value.trim());
 
-            var valueId = utils.getString(injectionPropertiesSplitted[0]);
-            var valueField = utils.getString(injectionPropertiesSplitted[1]);
+            var valueId = utils.getString(injectionProperties[0]);
+            var valueField = utils.getString(injectionProperties[1]);
 
-            change.injectionProperties = {
+            processedChanges.push({
                 id: valueId,
                 field: valueField
-            };
-
-            processedChanges.push(change);
+            });
         });
 
         options.changes = processedChanges;
@@ -90,14 +86,14 @@ function processInjections(options) {
 }
 
 function retrieveValuesFromProvider(options) {
-    var valuesIds = Array.from(new Set(options.changes.map(change => change.injectionProperties.id)));
+    var valuesIds = Array.from(new Set(options.changes.map(change => change.id)));
 
     return Q(options.provider.getValues(valuesIds))
         .then(values => {
             valuesIds.forEach(valueId => {
                 options.changes
-                    .filter(change => change.injectionProperties.id === valueId)
-                    .forEach(change => change.injectionProperties.value = values[valueId][change.injectionProperties.field]);
+                    .filter(change => change.id === valueId)
+                    .forEach(change => change.value = values[valueId][change.field]);
             });
 
             return options;
@@ -106,10 +102,14 @@ function retrieveValuesFromProvider(options) {
 
 function replaceAnnotations(options) {
     return Q.promise((resolve) => {
-        options.changes.forEach(change => {
-                options.fileContents[change.index] =
-                    options.fileContents[change.index].replace(options.regex, change.injectionProperties.value);
-            });
+      options.regex = new RegExp(options.regex);
+      var results = options.regex.exec(options.fileContents);
+
+      while (results != null) {
+        // TODO insert right injection for each change
+        options.fileContents = options.fileContents.replace(results[0], options.changes[0].value);
+        results = options.regex.exec(options.fileContents);
+      }
 
         return resolve(options);
     });
@@ -117,10 +117,9 @@ function replaceAnnotations(options) {
 
 function writeOutputFile(options) {
     return Q.promise((resolve, reject) => {
-        const fileContents = options.fileContents.join(options.lineDelimiter);
         const outputFile = options.outputFile || options.inputFile;
 
-        fs.writeFile(outputFile, fileContents, (error)=>{
+        fs.writeFile(outputFile, options.fileContents, (error) => {
             if(error)
                 return reject(utils.extendError(error, 'Error writing output file'));
             return resolve(outputFile);
@@ -128,7 +127,7 @@ function writeOutputFile(options) {
     });
 }
 
-function injectMe(options) {
+function inject(options) {
     //keep original options object intact
     options = Object.create(options);
     return validateOptions(options)
@@ -141,4 +140,4 @@ function injectMe(options) {
         .then(writeOutputFile);
 }
 
-module.exports = injectMe;
+module.exports = inject;
