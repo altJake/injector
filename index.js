@@ -26,6 +26,8 @@ function prepareOptions(options){
         new RegExp(util.format(annotationRegexTemplate, options.annotationKey),
                     options.regexFlags || 'g');
 
+        options.outputFile = options.outputFile || options.inputFile;
+
         return resolve(options);
     });
 }
@@ -71,6 +73,12 @@ function extractAnnotations(options) {
     });
 }
 
+/**
+ * Remove the annotation
+ * @param {String} str - string in this format: "@annotationKey(<Key>, <Property>)"
+ * @param {String} annotationKey
+ * @return {String} a string stripped from the annotation format
+ */
 function extractToken(str, annotationKey){
     return str.substring(annotationKey.length+2).slice(0, -1);
 }
@@ -81,15 +89,13 @@ function processInjections(options) {
         options.changes.forEach(change => {
           var injectionProperties = change.token.split(',');
             if (injectionProperties.length !== 2){
-                return reject(new Error('Invalid format at line ' + change + '.' ))
+                return reject(new Error('Invalid format at ' + chang.token + '.' ))
             }
 
             injectionProperties = injectionProperties.map(value=> value.trim());
 
-            var valueId = utils.getString(injectionProperties[0]);
-            var valueField = utils.getString(injectionProperties[1]);
-            change.id = valueId;
-            change.field = valueField;
+            change.id = utils.getString(injectionProperties[0]);
+            change.field = utils.getString(injectionProperties[1]);
         });
 
         return resolve(options);
@@ -111,7 +117,7 @@ function retrieveValuesFromProvider(options) {
         });
 }
 
-function replaceAnnotations(options) {
+function createOutputFileContents(options) {
     return Q.promise((resolve) => {
         options.fileContents = options.buildString();
         return resolve(options);
@@ -120,12 +126,10 @@ function replaceAnnotations(options) {
 
 function writeOutputFile(options) {
     return Q.promise((resolve, reject) => {
-        const outputFile = options.outputFile || options.inputFile;
-
-        fs.writeFile(outputFile, options.fileContents, (error) => {
+        fs.writeFile(options.outputFile, options.fileContents, (error) => {
             if(error)
                 return reject(utils.extendError(error, 'Error writing output file'));
-            return resolve(outputFile);
+            return resolve(options.outputFile);
         });
     });
 }
@@ -139,7 +143,7 @@ function inject(options) {
         .then(extractAnnotations)
         .then(processInjections)
         .then(retrieveValuesFromProvider)
-        .then(replaceAnnotations)
+        .then(createOutputFileContents)
         .then(writeOutputFile);
 }
 

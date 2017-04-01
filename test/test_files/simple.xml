@@ -1,0 +1,11 @@
+<?xml version='1.0'?>
+<config>
+    <db>
+        <host>@injekt('db','host')</host>
+        <username>@injekt('db','user name')</username>
+        <password>@injekt('db','password')</password>
+    </db>
+    <logger>
+        <token>@injekt('logz', 'token')</token>
+    </logger>
+</config>
