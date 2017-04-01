@@ -37,4 +37,4 @@ jspm_packages
 .node_repl_history
 
 # Test files
-test/test_files/processed.*
+test/test_files/results

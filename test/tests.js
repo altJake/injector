@@ -33,23 +33,32 @@ describe('Injector', function() {
 		annotationKey: 'injekt',
 		provider: simpleProvider
 	};
+	
+	beforeEach((done) => deleteTestDir(done, true));
+	afterEach((done) => deleteTestDir(done));
 
-	beforeEach(() => {
-		rimraf('./test_files/results', function (err) {
+	function deleteTestDir(done, createNewFolder){
+		const dir = './test/test_files/results';
+		rimraf(dir, function (err) {
 			if(err){
-				console.log('Error deleting test files ', err);
+				return console.error('Error deleting test files ', err);
+			} else {
+				if(createNewFolder){
+					fs.mkdirSync(dir);
+				}
+				done();
 			}
 		});
-	});
+	}
 
 	it('xml', function() {
 		const options = Object.create(defaultOptions); 
 		options.inputFile = './test/test_files/simple.xml';
-		options.outputFile = './test/test_files/processed.xml';
+		options.outputFile = './test/test_files/results/processed.xml';
 
 		injector(options)
 			.then(outputFile => {
-				var result = require('../test/test_files/processed.xml')
+				var result = require('../test/test_files/results/processed.xml')
 				parseXml(result, function (err, result) {
 					if(err){
 						return console.log('Not a valid xml', err);
@@ -65,11 +74,11 @@ describe('Injector', function() {
     it('json', function(done) {
 		const options = Object.create(defaultOptions); 
 		options.inputFile = './test/test_files/simple.json';
-		options.outputFile = './test/test_files/processed.json';
+		options.outputFile = './test/test_files/results/processed.json';
 
 		injector(options)
 			.then(outputFile => {
-				testResult(require('../test/test_files/processed.json'));
+				testResult(require('../test/test_files/results/processed.json'));
 				done();
 			})
 			.catch(err => done(err));
