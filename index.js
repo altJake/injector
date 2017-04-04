@@ -106,9 +106,11 @@ function retrieveValuesFromProvider(options) {
             valuesIds: Array.from(new Set(options.changes.map(change => change.id)))
         };
 
-        context.values = options.provider.getValues(context.valuesIds);
-
-        return resolve(context);
+        return Q(options.provider.getValues(context.valuesIds))
+            .then(values => {
+                context.values = values;
+                return resolve(context);
+            });
     })
     .then(context  => {
         context.valuesIds.forEach(valueId => {
