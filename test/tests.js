@@ -1,7 +1,7 @@
 /*
 1. no @annotations in file
-2. multiple @annotations from the same value
-3. multiple @annotations from different values
+2. multiple @annotations with the same value
+3. multiple @annotations with different values
 4. same for js files with single-quotes
 5. games with spaced-values-ids or fields
 */

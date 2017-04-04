@@ -20,7 +20,7 @@ function validateOptions(options) {
     });
 }
 
-function prepareOptions(options){
+function prepareOptions(options) {
     return Q.promise((resolve) => {
         options.regex =
         new RegExp(util.format(annotationRegexTemplate, options.annotationKey),
@@ -32,7 +32,7 @@ function prepareOptions(options){
     });
 }
 
-function readInputFile(options){
+function readInputFile(options) {
     return Q.promise((resolve, reject) => {
         fs.readFile(options.inputFile, (error, data)=>{
             if(error)
@@ -50,18 +50,16 @@ function extractAnnotations(options) {
         var splitted = options.fileContents.split(options.regex);
         options.changes = [];
 
-        if(splitted.length !== 1){
-            for (var i = 0; i < splitted.length; i++) {
+        for (var i = 0; i < splitted.length; i++) {
 
-                if(options.regex.test(splitted[i])){
-                    options.changes.push({
-                        token: extractToken(splitted[i], options.annotationKey),
-                        index: i,
-                        replace: function(value){
-                            splitted[this.index] = value;
-                        }
-                    });
-                }
+            if(options.regex.test(splitted[i])){
+                options.changes.push({
+                    token: extractToken(splitted[i], options.annotationKey),
+                    index: i,
+                    replace: function(value){
+                        splitted[this.index] = value;
+                    }
+                });
             }
         }
 
@@ -79,7 +77,7 @@ function extractAnnotations(options) {
  * @param {String} annotationKey
  * @return {String} a string stripped from the annotation format
  */
-function extractToken(str, annotationKey){
+function extractToken(str, annotationKey) {
     return str.substring(annotationKey.length+2).slice(0, -1);
 }
 
@@ -88,11 +86,11 @@ function processInjections(options) {
 
         options.changes.forEach(change => {
           var injectionProperties = change.token.split(',');
-            if (injectionProperties.length !== 2){
-                return reject(new Error('Invalid format at ' + chang.token + '.' ))
+            if (injectionProperties.length !== 2) {
+                return reject(new Error('Invalid format at "' + chang.token + '".' ));
             }
 
-            injectionProperties = injectionProperties.map(value=> value.trim());
+            injectionProperties = injectionProperties.map(value => value.trim());
 
             change.id = utils.getString(injectionProperties[0]);
             change.field = utils.getString(injectionProperties[1]);
@@ -103,18 +101,24 @@ function processInjections(options) {
 }
 
 function retrieveValuesFromProvider(options) {
-    var valuesIds = Array.from(new Set(options.changes.map(change => change.id)));
+    return Q.promise(resolve => {
+        var context = {
+            valuesIds: Array.from(new Set(options.changes.map(change => change.id)))
+        };
 
-    return Q(options.provider.getValues(valuesIds))
-        .then(values => {
-            valuesIds.forEach(valueId => {
-                options.changes
-                    .filter(change => change.id === valueId)
-                    .forEach(change => change.replace(values[valueId][change.field]));
-            });
+        context.values = options.provider.getValues(context.valuesIds);
 
-            return options;
+        return resolve(context);
+    })
+    .then(context  => {
+        context.valuesIds.forEach(valueId => {
+            options.changes
+                .filter(change => change.id === valueId)
+                .forEach(change => change.replace(context.values[valueId][change.field]));
         });
+
+        return options;
+    });
 }
 
 function createOutputFileContents(options) {
